@@ -1,0 +1,18 @@
+[
+  {
+    "studentId": "S1001",
+    "name": "Alice Rao",
+    "email": "alice@example.com",
+    "passwordHash": "<bcrypt-placeholder>",
+    "activeEnrollments": 0,
+    "waitlistCount": 0
+  },
+  {
+    "studentId": "S1002",
+    "name": "Bob Singh",
+    "email": "bob@example.com",
+    "passwordHash": "<bcrypt-placeholder>",
+    "activeEnrollments": 0,
+    "waitlistCount": 0
+  }
+]

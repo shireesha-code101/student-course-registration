@@ -1,0 +1,114 @@
+{
+  "Courses": [
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "CSE101" },
+          "courseName": { "S": "Intro to Computer Science" },
+          "maxSeats": { "N": "2" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "MTH201" },
+          "courseName": { "S": "Discrete Mathematics" },
+          "maxSeats": { "N": "2" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "PHY101" },
+          "courseName": { "S": "Physics I" },
+          "maxSeats": { "N": "3" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "CHE101" },
+          "courseName": { "S": "Chemistry I" },
+          "maxSeats": { "N": "3" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "ENG101" },
+          "courseName": { "S": "English Composition" },
+          "maxSeats": { "N": "4" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "BIO101" },
+          "courseName": { "S": "Biology I" },
+          "maxSeats": { "N": "3" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "HIS101" },
+          "courseName": { "S": "World History" },
+          "maxSeats": { "N": "2" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "CSE201" },
+          "courseName": { "S": "Data Structures" },
+          "maxSeats": { "N": "2" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "CSE301" },
+          "courseName": { "S": "Algorithms" },
+          "maxSeats": { "N": "2" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "courseId": { "S": "ECO101" },
+          "courseName": { "S": "Economics I" },
+          "maxSeats": { "N": "3" },
+          "currentEnrolledCount": { "N": "0" },
+          "waitlistSeq": { "N": "0" }
+        }
+      }
+    }
+  ]
+}
