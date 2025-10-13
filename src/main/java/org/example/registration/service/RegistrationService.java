@@ -12,29 +12,6 @@ import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedExce
 
 import java.util.*;
 
-/**
- * RegistrationService
- *
- * Handles:
- *  - signup / login
- *  - listCourses
- *  - enroll (waitlist if full)
- *  - drop (handles enrolled + waitlisted + duplicate drops)
- *  - getMyCourses
- *
- * Note: this class expects DAOs with the following methods:
- *  - CourseDao.reserveSeatIfAvailable(String)
- *  - CourseDao.releaseSeat(String)
- *  - CourseDao.getCourse(String)
- *  - EnrollmentDao.putEnrollment(...)
- *  - EnrollmentDao.deleteEnrollment(...)
- *  - WaitlistDao.addToWaitlist(...)
- *  - WaitlistDao.removeAllWaitlistEntries(...)
- *  - WaitlistDao.popFirstWaitlistedStudent(...)
- *  - WaitlistDao.isStudentOnWaitlist(...)
- *  - DropDao.recordDrop(...) returns boolean
- *  - DropDao.hasDroppedBefore(...)
- */
 public class RegistrationService {
     private final DynamoDbClient client;
     private final StudentDao studentDao;
@@ -44,7 +21,6 @@ public class RegistrationService {
     private final WaitlistDao waitlistDao;
     private final DropDao dropDao;
 
-    // ------------------------ Production constructor ------------------------
     public RegistrationService(DynamoDbClient client) {
         this(
                 client,
@@ -57,7 +33,6 @@ public class RegistrationService {
         );
     }
 
-    // ------------------------ Test-friendly constructor ------------------------
     public RegistrationService(
             DynamoDbClient client,
             StudentDao studentDao,
@@ -76,9 +51,7 @@ public class RegistrationService {
         this.dropDao = dropDao;
     }
 
-    // ------------------------------------------------------
-    // SIGNUP
-    // ------------------------------------------------------
+    // ---------------- SIGNUP ----------------
     public String signup(String studentId, String name, String email, String password) {
         if (studentId == null || name == null || email == null || password == null)
             return "❌ All fields are required.";
@@ -117,9 +90,7 @@ public class RegistrationService {
         }
     }
 
-    // ------------------------------------------------------
-    // LOGIN
-    // ------------------------------------------------------
+    // ---------------- LOGIN ----------------
     public boolean login(String studentId, String password) {
         try {
             Student s = studentDao.getStudent(studentId);
@@ -131,9 +102,28 @@ public class RegistrationService {
         }
     }
 
-    // ------------------------------------------------------
-    // LIST COURSES
-    // ------------------------------------------------------
+    // ---------------- RESET PASSWORD (NEW) ----------------
+    public String resetPassword(String studentId, String newPassword) {
+        try {
+            if (studentId == null || studentId.isBlank()) {
+                return "❌ Student ID cannot be empty.";
+            }
+            if (newPassword == null || newPassword.length() < 4) {
+                return "❌ Password must be at least 4 characters long.";
+            }
+            if (!isStudentIdExists(studentId)) {
+                return "❌ Student not found. Please sign up first.";
+            }
+            String hashed = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+            studentDao.updatePassword(studentId, hashed);
+            return "✅ Password reset successfully.";
+        } catch (Exception e) {
+            System.err.println("Error resetting password: " + e.getMessage());
+            return "❌ Failed to reset password: " + e.getMessage();
+        }
+    }
+
+    // ---------------- LIST COURSES ----------------
     public List<Course> listCourses() {
         try {
             return courseDao.listAllCourses();
@@ -143,9 +133,7 @@ public class RegistrationService {
         }
     }
 
-    // ------------------------------------------------------
-    // Helper: checks Enrollment table directly for (studentId, courseId)
-    // ------------------------------------------------------
+    // Helper: check Enrollment table for (studentId, courseId)
     private boolean isStudentEnrolled(String studentId, String courseId) {
         try {
             GetItemRequest req = GetItemRequest.builder()
@@ -156,18 +144,14 @@ public class RegistrationService {
                     ))
                     .consistentRead(true)
                     .build();
-
-            var res = client.getItem(req);
-            return res.hasItem();
+            return client.getItem(req).hasItem();
         } catch (Exception e) {
             System.err.println("Error checking enrollment: " + e.getMessage());
             return false;
         }
     }
 
-    // ------------------------------------------------------
-    // ENROLL IN COURSE
-    // ------------------------------------------------------
+    // ---------------- ENROLL ----------------
     public String enroll(String studentId, String courseId, boolean waitlistConsent) {
         try {
             if (studentId == null || studentId.trim().isEmpty())
@@ -181,7 +165,6 @@ public class RegistrationService {
             if (!isStudentIdExists(studentId))
                 return "❌ Student not found. Please sign up first.";
 
-            // Prevent duplicates: check enrollment first (direct), then waitlist
             if (isStudentEnrolled(studentId, courseId))
                 return "❌ You are already enrolled in this course.";
 
@@ -213,13 +196,7 @@ public class RegistrationService {
         }
     }
 
-
-// ------------------------------------------------------
-    // DROP IN COURSE
-    // ------------------------------------------------------
-
-
-    // inside RegistrationService class: replace existing drop(...) with this
+    // ---------------- DROP ----------------
     public String drop(String studentId, String courseId) {
         try {
             if (studentId == null || studentId.trim().isEmpty())
@@ -237,64 +214,46 @@ public class RegistrationService {
             if (course == null)
                 return "❌ Course not found. Please check the Course ID.";
 
-            // 1) Check if student already dropped this course
             if (dropDao.hasDroppedBefore(studentId, courseId)) {
                 return "⚠ You have already dropped this course earlier.";
             }
 
-            // 1.5) Check explicit enrollment BEFORE attempting delete
             boolean currentlyEnrolled = isStudentEnrolled(studentId, courseId);
             if (currentlyEnrolled) {
-                // 2) Attempt conditional delete from enrollment (DAO should only return true if it actually deleted)
                 boolean deletedFromEnrollment = enrollmentDao.deleteEnrollment(studentId, courseId);
                 if (deletedFromEnrollment) {
-                    // require that we persisted the drop record
                     boolean recorded = dropDao.recordDrop(studentId, courseId, "STUDENT", "Dropped from enrolled course");
                     if (!recorded) {
                         System.err.println("Error: recordDrop failed for " + studentId + " / " + courseId);
                         return "❌ Dropped from course but failed to persist drop record. Please contact admin.";
                     }
 
-                    // release seat
                     courseDao.releaseSeat(courseId);
 
-                    // promote next waitlisted student (if any)
                     String promoted = waitlistDao.popFirstWaitlistedStudent(courseId);
                     if (promoted != null) {
                         boolean reservedForPromoted = courseDao.reserveSeatIfAvailable(courseId);
                         if (reservedForPromoted) {
                             enrollmentDao.putEnrollment(promoted, courseId, "ENROLLED");
-                            boolean rec2 = dropDao.recordDrop(promoted, courseId, "SYSTEM", "Promoted from waitlist after drop");
-                            if (!rec2) System.err.println("Warning: recordDrop for promoted student failed: " + promoted);
+                            dropDao.recordDrop(promoted, courseId, "SYSTEM", "Promoted from waitlist after drop");
                             return "✅ Dropped from course. Promoted " + promoted + " from waitlist.";
                         } else {
-                            // requeue promoted student
                             waitlistDao.addToWaitlist(courseId, promoted, Collections.emptyMap());
                             return "✅ Dropped from course. (Promotion skipped due to concurrency.)";
                         }
                     }
-
                     return "✅ Dropped from course.";
                 } else {
-                    // unexpected: we thought enrolled but delete returned false. Log and inform user.
-                    System.err.println("Warning: enrollmentDao.deleteEnrollment returned false although isStudentEnrolled was true for "
-                            + studentId + " / " + courseId);
                     return "❌ Could not remove enrollment due to concurrency. Please try again.";
                 }
             }
 
-            // 3) Not enrolled → remove any waitlist entries
             boolean removedFromWaitlist = waitlistDao.removeAllWaitlistEntries(courseId, studentId);
             if (removedFromWaitlist) {
-                boolean recorded = dropDao.recordDrop(studentId, courseId, "STUDENT", "Removed from waitlist by student");
-                if (!recorded) {
-                    System.err.println("Error: recordDrop failed for waitlist removal: " + studentId + " / " + courseId);
-                    return "❌ Removed from waitlist but failed to persist drop record. Please contact admin.";
-                }
+                dropDao.recordDrop(studentId, courseId, "STUDENT", "Removed from waitlist by student");
                 return "✅ Dropped from waitlist.";
             }
 
-            // 4) nothing found
             return "⚠ You are not enrolled or waitlisted for this course.";
         } catch (Exception e) {
             System.err.println("Drop error: " + e.getMessage());
@@ -302,9 +261,7 @@ public class RegistrationService {
         }
     }
 
-    // ------------------------------------------------------
-    // MY COURSES
-    // ------------------------------------------------------
+    // ---------------- MY COURSES (Enhanced: includes titles) ----------------
     public List<String> getMyCourses(String studentId) {
         List<String> list = new ArrayList<>();
         try {
@@ -318,7 +275,10 @@ public class RegistrationService {
             for (var item : res.items()) {
                 String cid = item.get("courseId").s();
                 String status = item.get("status").s();
-                list.add(cid + " (" + status + ")");
+
+                Course course = courseDao.getCourse(cid);
+                String title = (course != null && course.title != null) ? course.title : "(Unknown Title)";
+                list.add(cid + " - " + title + " (" + status + ")");
             }
 
             var waitlists = waitlistDao.getWaitlistsByStudent(studentId, 0);
@@ -327,7 +287,11 @@ public class RegistrationService {
                     if (w.containsKey("courseId")) {
                         String cid = w.get("courseId").s();
                         boolean already = list.stream().anyMatch(s -> s.startsWith(cid + " "));
-                        if (!already) list.add(cid + " (WAITLIST)");
+                        if (!already) {
+                            Course course = courseDao.getCourse(cid);
+                            String title = (course != null && course.title != null) ? course.title : "(Unknown Title)";
+                            list.add(cid + " - " + title + " (WAITLIST)");
+                        }
                     }
                 }
             }
@@ -337,9 +301,7 @@ public class RegistrationService {
         return list;
     }
 
-    // ------------------------------------------------------
-// DEBUG HELPER
-// ------------------------------------------------------
+    // ---------------- DEBUG HELPER ----------------
     public void debugPrintDrops(String studentId, String courseId) {
         try {
             dropDao.debugFindDrops(studentId, courseId);
@@ -348,13 +310,10 @@ public class RegistrationService {
         }
     }
 
-
-    // ------------------------------------------------------
-    // VALIDATION HELPERS
-    // ------------------------------------------------------
+    // ---------------- HELPERS ----------------
     public boolean isStudentIdExists(String studentId) {
         try {
-            var req = software.amazon.awssdk.services.dynamodb.model.GetItemRequest.builder()
+            var req = GetItemRequest.builder()
                     .tableName("Student")
                     .key(Map.of("studentId", AttributeValue.builder().s(studentId).build()))
                     .build();
@@ -367,7 +326,7 @@ public class RegistrationService {
 
     public boolean isEmailExists(String email) {
         try {
-            var req = software.amazon.awssdk.services.dynamodb.model.GetItemRequest.builder()
+            var req = GetItemRequest.builder()
                     .tableName("EmailIndex")
                     .key(Map.of("email", AttributeValue.builder().s(email.toLowerCase()).build()))
                     .build();

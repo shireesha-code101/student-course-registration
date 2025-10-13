@@ -13,6 +13,24 @@ public class StudentDao {
 
     public StudentDao(DynamoDbClient client) { this.client = client; }
 
+    // ✅ NEW: updates the stored (hashed) password for a studentId
+    public void updatePassword(String studentId, String hashedPassword) {
+        Map<String, AttributeValue> key = new HashMap<>();
+        key.put("studentId", AttributeValue.builder().s(studentId).build());
+
+        UpdateItemRequest req = UpdateItemRequest.builder()
+                .tableName(table)
+                .key(key)
+                .updateExpression("SET #pwd = :p")
+                // Store into the same attribute your model uses (Student.passwordHash)
+                .expressionAttributeNames(Map.of("#pwd", "passwordHash"))
+                .expressionAttributeValues(Map.of(":p", AttributeValue.builder().s(hashedPassword).build()))
+                .conditionExpression("attribute_exists(studentId)") // ensure the student exists
+                .build();
+
+        client.updateItem(req);
+    }
+
     public void putStudent(Student s) {
         PutItemRequest req = PutItemRequest.builder()
                 .tableName(table)
