@@ -9,12 +9,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import java.util.Map;
 
-/**
- * AdminService handles admin operations:
- *  - View, Add, Update, Delete courses
- *  - Promote waitlisted students
- *  - View waitlists and drop history
- */
 public class AdminService {
     private final DynamoDbClient client;
     private final CourseDao courseDao;
@@ -31,7 +25,7 @@ public class AdminService {
     }
 
     // ------------------------------------------------------
-    // 1️⃣  LIST ALL COURSES
+    //  1 LIST ALL COURSES
     // ------------------------------------------------------
     public java.util.List<Course> listAllCourses() {
         try {
@@ -43,7 +37,7 @@ public class AdminService {
     }
 
     // ------------------------------------------------------
-    // 2️⃣  ADD COURSE (no duplicates allowed)
+    // 2️ ADD COURSE (no duplicates allowed)
     // ------------------------------------------------------
     public String addCourse(String courseId, String title, int maxSeats) {
         try {
@@ -81,7 +75,7 @@ public class AdminService {
     }
 
     // ------------------------------------------------------
-    // 3️⃣  UPDATE COURSE SEATS (defensive: only update if course truly exists)
+    // 3️ UPDATE COURSE SEATS (defensive: only update if course truly exists)
     // ------------------------------------------------------
     public String updateCourseSeats(String courseId, int newSeats) {
         try {
@@ -115,7 +109,7 @@ public class AdminService {
 
 
     // ------------------------------------------------------
-    // 4️⃣  PROMOTE WAITLISTED STUDENT
+    // 4️  PROMOTE WAITLISTED STUDENT
     // ------------------------------------------------------
     public String promoteWaitlistedStudent(String courseId) {
         try {
@@ -145,7 +139,7 @@ public class AdminService {
     }
 
     // ------------------------------------------------------
-    // 5️⃣  DELETE COURSE (safe + full cleanup)
+    // 5️ DELETE COURSE (safe + full cleanup)
     // ------------------------------------------------------
     public String deleteCourse(String courseId) {
         if (courseId == null || courseId.trim().isEmpty()) {
@@ -220,7 +214,7 @@ public class AdminService {
     }
 
     // ------------------------------------------------------
-    // 6️⃣  LIST WAITLISTED STUDENTS (only for existing courses)
+    // 6️ LIST WAITLISTED STUDENTS (only for existing courses)
     // ------------------------------------------------------
     public String listWaitlistedStudents(String courseId) {
         try {
@@ -254,7 +248,7 @@ public class AdminService {
 
 
     // ------------------------------------------------------
-    // 7️⃣  VIEW DROP HISTORY (only for courses that exist)
+    // 7️ VIEW DROP HISTORY (only for courses that exist)
     // ------------------------------------------------------
     public String listDropHistoryForCourse(String courseId) {
         try {

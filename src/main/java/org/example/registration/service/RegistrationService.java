@@ -102,7 +102,7 @@ public class RegistrationService {
         }
     }
 
-    // ---------------- RESET PASSWORD (NEW) ----------------
+    // ---------------- RESET PASSWORD ----------------
     public String resetPassword(String studentId, String newPassword) {
         try {
             if (studentId == null || studentId.isBlank()) {

@@ -5,14 +5,6 @@ import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.util.*;
 
-/**
- * EnrollmentDao
- *
- * Table: Enrollment
- *  - studentId (Partition key)
- *  - courseId (Sort key)
- *  - status ("ENROLLED" or "WAITLIST")
- */
 public class EnrollmentDao {
     private final DynamoDbClient client;
     private final String tableName = "Enrollment";
@@ -20,10 +12,6 @@ public class EnrollmentDao {
     public EnrollmentDao(DynamoDbClient client) {
         this.client = client;
     }
-
-    // ------------------------------------------------------
-    // PUT ENROLLMENT
-    // ------------------------------------------------------
     public void putEnrollment(String studentId, String courseId, String status) {
         try {
             Map<String, AttributeValue> item = new HashMap<>();
@@ -42,14 +30,6 @@ public class EnrollmentDao {
             System.err.println("Error adding enrollment: " + e.getMessage());
         }
     }
-
-    // ------------------------------------------------------
-    // DELETE ENROLLMENT (conditional)
-    // ------------------------------------------------------
-    /**
-     * Delete enrollment only if the item exists (conditional delete).
-     * Returns true if an item was deleted, false if there was no enrollment to delete.
-     */
     public boolean deleteEnrollment(String studentId, String courseId) {
         try {
             Map<String, AttributeValue> key = new HashMap<>();
@@ -73,10 +53,6 @@ public class EnrollmentDao {
             return false;
         }
     }
-
-    // ------------------------------------------------------
-    // CHECK IF STUDENT IS ENROLLED (ONLY)
-    // ------------------------------------------------------
     public boolean isEnrolled(String studentId, String courseId) {
         try {
             Map<String, AttributeValue> key = new HashMap<>();
@@ -96,10 +72,6 @@ public class EnrollmentDao {
             return false;
         }
     }
-
-    // ------------------------------------------------------
-    // LIST ENROLLMENTS (for admin)
-    // ------------------------------------------------------
     public List<Map<String, AttributeValue>> listAllEnrollments() {
         try {
             ScanRequest req = ScanRequest.builder().tableName(tableName).build();

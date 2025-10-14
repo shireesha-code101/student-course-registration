@@ -20,15 +20,6 @@ public class Course {
         return item;
     }
 
-    /**
-     * Read a Course from a DynamoDB item.
-     * Accepts both the canonical attribute names:
-     *   - title (S), currentEnrolled (N)
-     * and legacy names:
-     *   - courseName (S), currentEnrolledCount (N)
-     *
-     * Returns null if required fields are missing or invalid.
-     */
     public static Course fromItem(Map<String, AttributeValue> item) {
         if (item == null || item.isEmpty()) return null;
 
@@ -39,7 +30,6 @@ public class Course {
             return null;
         }
 
-        // title: try canonical 'title' then legacy 'courseName'
         var titleAttr = item.get("title");
         if (titleAttr == null || titleAttr.s() == null) titleAttr = item.get("courseName");
         if (titleAttr == null || titleAttr.s() == null) {

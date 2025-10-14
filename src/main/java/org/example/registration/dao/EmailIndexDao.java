@@ -14,12 +14,6 @@ public class EmailIndexDao {
     public EmailIndexDao(DynamoDbClient client) {
         this.client = client;
     }
-
-    /**
-     * Try to reserve an email for a studentId.
-     * Throws ConditionalCheckFailedException if email already exists.
-     * Throws ResourceNotFoundException if table missing.
-     */
     public void putEmail(String email, String studentId) {
         if (email == null) throw new IllegalArgumentException("email is null");
         String norm = email.toLowerCase();
@@ -40,10 +34,6 @@ public class EmailIndexDao {
         } // ResourceNotFoundException / DynamoDbException allowed to bubble up or be handled by service
     }
 
-    /**
-     * Return true if email exists (case-insensitive).
-     * Returns false when table is missing (logs to stderr).
-     */
     public boolean emailExists(String email) {
         if (email == null) return false;
         String norm = email.toLowerCase();

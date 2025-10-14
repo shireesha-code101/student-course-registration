@@ -6,22 +6,6 @@ import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.util.*;
 
-/**
- * CourseDao
- *
- * Works with Course model fields:
- *  - courseId (PK)
- *  - title (S)
- *  - maxSeats (N)
- *  - currentEnrolled (N)
- *
- * Reservation strategy:
- *  - reserveSeatIfAvailable(...) does an atomic conditional update:
- *      condition => maxSeats exists AND (currentEnrolled not exists OR currentEnrolled < maxSeats)
- *      update => increment currentEnrolled by 1 (using if_not_exists for safe initialization)
- *
- *  - releaseSeat(...) decrements currentEnrolled if > 0
- */
 public class CourseDao {
     private final DynamoDbClient client;
     private final String tableName = "Course";
@@ -62,11 +46,6 @@ public class CourseDao {
             return Collections.emptyList();
         }
     }
-
-    /**
-     * Atomically reserve a seat if currentEnrolled < maxSeats.
-     * Returns true if reserved (currentEnrolled incremented), false if full or error.
-     */
     public boolean reserveSeatIfAvailable(String courseId) {
         try {
             Map<String, AttributeValue> key = Map.of("courseId", AttributeValue.builder().s(courseId).build());
@@ -91,18 +70,12 @@ public class CourseDao {
             client.updateItem(req);
             return true;
         } catch (ConditionalCheckFailedException ccfe) {
-            // Condition failed → course full or missing maxSeats
             return false;
         } catch (Exception e) {
             System.err.println("Error reserving seat: " + e.getMessage());
             return false;
         }
     }
-
-    /**
-     * Release a seat (decrement currentEnrolled) if currentEnrolled > 0.
-     * Returns true if decremented, false if it was already 0 or error.
-     */
     public boolean releaseSeat(String courseId) {
         try {
             Map<String, AttributeValue> key = Map.of("courseId", AttributeValue.builder().s(courseId).build());
@@ -133,10 +106,6 @@ public class CourseDao {
             return false;
         }
     }
-
-    /**
-     * Forcefully increment maxSeats (e.g., admin action).
-     */
     public boolean incrementMaxSeats(String courseId, int by) {
         if (by <= 0) return false;
         try {
@@ -157,10 +126,6 @@ public class CourseDao {
             return false;
         }
     }
-
-    /**
-     * Persist Course object to table (overwrite).
-     */
     public void putCourseForUpdate(Course course) {
         try {
             Map<String, AttributeValue> item = course.toItem();
@@ -173,11 +138,6 @@ public class CourseDao {
             System.err.println("Error putCourseForUpdate: " + e.getMessage());
         }
     }
-
-    /**
-     * Create a new Course entry, failing if the courseId already exists.
-     * Returns true if created, false if already exists or error.
-     */
     public boolean putCourse(Course course) {
         if (course == null || course.courseId == null || course.courseId.trim().isEmpty()) {
             System.err.println("putCourse: invalid course object");
@@ -204,9 +164,6 @@ public class CourseDao {
         }
     }
 
-    /**
-     * Delete a course from the Course table
-     */
     public boolean deleteCourse(String courseId) {
         try {
             Map<String, AttributeValue> key = Map.of("courseId", AttributeValue.builder().s(courseId).build());

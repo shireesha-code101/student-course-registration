@@ -5,20 +5,6 @@ import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.util.*;
 
-/**
- * WaitlistDao
- *
- * Table: Waitlist
- *  - courseId (Partition key)
- *  - createdAt (Sort key, timestamp)
- *  - studentId
- *  - name, email (optional)
- *
- * Notes:
- *  - We use consistentRead(true) on reads that the service relies on immediately after writes/deletes
- *    to avoid eventual-consistency races in the CLI flows.
- *  - removeAllWaitlistEntries(...) removes every matching (courseId, studentId) entry to avoid stale duplicates.
- */
 public class WaitlistDao {
     private final DynamoDbClient client;
     private final String tableName = "Waitlist";
@@ -26,10 +12,6 @@ public class WaitlistDao {
     public WaitlistDao(DynamoDbClient client) {
         this.client = client;
     }
-
-    // ------------------------------------------------------
-    // ADD TO WAITLIST
-    // ------------------------------------------------------
     public void addToWaitlist(String courseId, String studentId, Map<String, String> extra) {
         try {
             String createdAt = String.valueOf(System.currentTimeMillis());
@@ -56,10 +38,6 @@ public class WaitlistDao {
             System.err.println("Error adding to waitlist: " + e.getMessage());
         }
     }
-
-    // ------------------------------------------------------
-    // POP FIRST WAITLISTED STUDENT (oldest createdAt)
-    // ------------------------------------------------------
     public String popFirstWaitlistedStudent(String courseId) {
         try {
             QueryRequest query = QueryRequest.builder()
@@ -86,10 +64,6 @@ public class WaitlistDao {
             return null;
         }
     }
-
-    // ------------------------------------------------------
-    // REMOVE WAITLIST ENTRY (by courseId + createdAt)
-    // ------------------------------------------------------
     public boolean removeWaitlistEntry(String courseId, String createdAt) {
         try {
             Map<String, AttributeValue> key = Map.of(
@@ -107,11 +81,6 @@ public class WaitlistDao {
             return false;
         }
     }
-
-    // ------------------------------------------------------
-    // REMOVE ALL WAITLIST ENTRIES FOR (courseId, studentId)
-    // ------------------------------------------------------
-    // Useful when a student may have multiple waitlist rows (requeued, race conditions).
     public boolean removeAllWaitlistEntries(String courseId, String studentId) {
         try {
             // Scan for all items matching both courseId and studentId
@@ -151,10 +120,6 @@ public class WaitlistDao {
             return false;
         }
     }
-
-    // ------------------------------------------------------
-    // GET WAITLISTS BY STUDENT
-    // ------------------------------------------------------
     public List<Map<String, AttributeValue>> getWaitlistsByStudent(String studentId, int limit) {
         try {
             ScanRequest req = ScanRequest.builder()
@@ -173,10 +138,6 @@ public class WaitlistDao {
             return Collections.emptyList();
         }
     }
-
-    // ------------------------------------------------------
-    // GET WAITLISTS BY COURSE (oldest first)
-    // ------------------------------------------------------
     public List<Map<String, AttributeValue>> getWaitlistsByCourse(String courseId) {
         try {
             QueryRequest query = QueryRequest.builder()
@@ -195,10 +156,6 @@ public class WaitlistDao {
             return Collections.emptyList();
         }
     }
-
-    // ------------------------------------------------------
-    // CHECK IF STUDENT IS ON WAITLIST
-    // ------------------------------------------------------
     public boolean isStudentOnWaitlist(String courseId, String studentId) {
         try {
             ScanRequest req = ScanRequest.builder()

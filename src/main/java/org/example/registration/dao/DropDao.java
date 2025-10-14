@@ -4,16 +4,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.util.*;
-
-/**
- * DropDao - robust + debug-friendly
- *
- * This version:
- *  - writes a drop record using a dropId UUID (safe for most schemas)
- *  - immediately scans with consistentRead(true) to confirm the item exists
- *  - returns boolean success from recordDrop so callers know
- *  - provides debugFindDrops(...) to list matching records (useful while testing)
- */
 public class DropDao {
     private final DynamoDbClient client;
     private final String tableName = "DropHistory";
@@ -22,10 +12,6 @@ public class DropDao {
         this.client = client;
     }
 
-    /**
-     * Record a drop and return true on success, false on failure.
-     * Adds a unique dropId (UUID) as a safe partition key.
-     */
     public boolean recordDrop(String studentId, String courseId, String actor, String reason) {
         try {
             if (studentId == null || studentId.isBlank()) studentId = "UNKNOWN_STUDENT";
