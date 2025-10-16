@@ -54,22 +54,22 @@ public class RegistrationService {
     // ---------------- SIGNUP ----------------
     public String signup(String studentId, String name, String email, String password) {
         if (studentId == null || name == null || email == null || password == null)
-            return "❌ All fields are required.";
+            return "All fields are required.";
 
         String normEmail = ValidationUtil.normalizeEmail(email);
 
         if (!ValidationUtil.isValidStudentId(studentId))
-            return "❌ Invalid student ID format.";
+            return "Invalid student ID format.";
         if (!ValidationUtil.isValidEmail(normEmail))
-            return "❌ Invalid email format.";
+            return "Invalid email format.";
         if (!ValidationUtil.isValidPassword(password))
-            return "❌ Weak password. Must include uppercase, lowercase, special character & ≥8 chars.";
+            return "Weak password. Must include uppercase, lowercase, special character & ≥8 chars.";
 
         try {
-            if (isStudentIdExists(studentId)) return "❌ Student ID already exists.";
-            if (isEmailExists(normEmail)) return "❌ Email already exists.";
+            if (isStudentIdExists(studentId)) return "Student ID already exists.";
+            if (isEmailExists(normEmail)) return "Email already exists.";
         } catch (RuntimeException e) {
-            return "❌ Database error while checking duplicates: " + e.getMessage();
+            return "Database error while checking duplicates: " + e.getMessage();
         }
 
         Student s = new Student();
@@ -81,12 +81,12 @@ public class RegistrationService {
         try {
             studentDao.putStudent(s);
             emailIndexDao.putEmail(normEmail, studentId);
-            return "✅ Signed up successfully.";
+            return "Signed up successfully.";
         } catch (ConditionalCheckFailedException e) {
-            return "❌ Student ID or Email already exists.";
+            return "Student ID or Email already exists.";
         } catch (Exception e) {
             System.err.println("Signup unexpected error: " + e.getMessage());
-            return "❌ Unexpected error: " + e.getMessage();
+            return "Unexpected error: " + e.getMessage();
         }
     }
 
@@ -106,20 +106,20 @@ public class RegistrationService {
     public String resetPassword(String studentId, String newPassword) {
         try {
             if (studentId == null || studentId.isBlank()) {
-                return "❌ Student ID cannot be empty.";
+                return "Student ID cannot be empty.";
             }
             if (newPassword == null || newPassword.length() < 4) {
-                return "❌ Password must be at least 4 characters long.";
+                return "Password must be at least 4 characters long.";
             }
             if (!isStudentIdExists(studentId)) {
-                return "❌ Student not found. Please sign up first.";
+                return "Student not found. Please sign up first.";
             }
             String hashed = BCrypt.hashpw(newPassword, BCrypt.gensalt());
             studentDao.updatePassword(studentId, hashed);
-            return "✅ Password reset successfully.";
+            return "Password reset successfully.";
         } catch (Exception e) {
             System.err.println("Error resetting password: " + e.getMessage());
-            return "❌ Failed to reset password: " + e.getMessage();
+            return "Failed to reset password: " + e.getMessage();
         }
     }
 
@@ -155,44 +155,44 @@ public class RegistrationService {
     public String enroll(String studentId, String courseId, boolean waitlistConsent) {
         try {
             if (studentId == null || studentId.trim().isEmpty())
-                return "⚠ Please login first.";
+                return "Please login first.";
             studentId = studentId.trim();
 
             if (courseId == null || courseId.trim().isEmpty())
-                return "❌ Invalid course ID.";
+                return "Invalid course ID.";
             courseId = courseId.trim();
 
             if (!isStudentIdExists(studentId))
-                return "❌ Student not found. Please sign up first.";
+                return "Student not found. Please sign up first.";
 
             if (isStudentEnrolled(studentId, courseId))
-                return "❌ You are already enrolled in this course.";
+                return "You are already enrolled in this course.";
 
             if (waitlistDao.isStudentOnWaitlist(courseId, studentId))
-                return "❌ You are already on the waitlist for this course.";
+                return "You are already on the waitlist for this course.";
 
             Course c = courseDao.getCourse(courseId);
             if (c == null || c.courseId == null || !courseId.equals(c.courseId))
-                return "❌ Course not found.";
+                return "Course not found.";
 
             boolean reserved = courseDao.reserveSeatIfAvailable(courseId);
             if (reserved) {
                 enrollmentDao.putEnrollment(studentId, courseId, "ENROLLED");
-                return "✅ Enrolled successfully!";
+                return "Enrolled successfully.";
             } else {
                 if (!waitlistConsent)
-                    return "⚠ Course full. Would you like to join the waitlist? (Y/N)";
+                    return "Course full. Would you like to join the waitlist? (Y/N)";
 
                 Student s = studentDao.getStudent(studentId);
                 Map<String, String> extra = s == null ? Collections.emptyMap() :
                         Map.of("name", s.name == null ? "" : s.name, "email", s.email == null ? "" : s.email);
 
                 waitlistDao.addToWaitlist(courseId, studentId, extra);
-                return "🕓 Course full. Added to waitlist.";
+                return "Course full. Added to waitlist.";
             }
         } catch (Exception e) {
             System.err.println("Enrollment error: " + e.getMessage());
-            return "❌ Enrollment error: " + e.getMessage();
+            return "Enrollment error: " + e.getMessage();
         }
     }
 
@@ -200,22 +200,22 @@ public class RegistrationService {
     public String drop(String studentId, String courseId) {
         try {
             if (studentId == null || studentId.trim().isEmpty())
-                return "⚠ Please login first.";
+                return "Please login first.";
             studentId = studentId.trim();
 
             if (!isStudentIdExists(studentId))
-                return "❌ Student record not found. Please sign up first.";
+                return "Student record not found. Please sign up first.";
 
             if (courseId == null || courseId.trim().isEmpty())
-                return "❌ Invalid course ID.";
+                return "Invalid course ID.";
             courseId = courseId.trim();
 
             Course course = courseDao.getCourse(courseId);
             if (course == null)
-                return "❌ Course not found. Please check the Course ID.";
+                return "Course not found. Please check the Course ID.";
 
             if (dropDao.hasDroppedBefore(studentId, courseId)) {
-                return "⚠ You have already dropped this course earlier.";
+                return "You have already dropped this course earlier.";
             }
 
             boolean currentlyEnrolled = isStudentEnrolled(studentId, courseId);
@@ -225,7 +225,7 @@ public class RegistrationService {
                     boolean recorded = dropDao.recordDrop(studentId, courseId, "STUDENT", "Dropped from enrolled course");
                     if (!recorded) {
                         System.err.println("Error: recordDrop failed for " + studentId + " / " + courseId);
-                        return "❌ Dropped from course but failed to persist drop record. Please contact admin.";
+                        return "Dropped from course but failed to persist drop record. Please contact admin.";
                     }
 
                     courseDao.releaseSeat(courseId);
@@ -236,28 +236,28 @@ public class RegistrationService {
                         if (reservedForPromoted) {
                             enrollmentDao.putEnrollment(promoted, courseId, "ENROLLED");
                             dropDao.recordDrop(promoted, courseId, "SYSTEM", "Promoted from waitlist after drop");
-                            return "✅ Dropped from course. Promoted " + promoted + " from waitlist.";
+                            return "Dropped from course. Promoted " + promoted + " from waitlist.";
                         } else {
                             waitlistDao.addToWaitlist(courseId, promoted, Collections.emptyMap());
-                            return "✅ Dropped from course. (Promotion skipped due to concurrency.)";
+                            return "Dropped from course. (Promotion skipped due to concurrency.)";
                         }
                     }
-                    return "✅ Dropped from course.";
+                    return "Dropped from course.";
                 } else {
-                    return "❌ Could not remove enrollment due to concurrency. Please try again.";
+                    return "Could not remove enrollment due to concurrency. Please try again.";
                 }
             }
 
             boolean removedFromWaitlist = waitlistDao.removeAllWaitlistEntries(courseId, studentId);
             if (removedFromWaitlist) {
                 dropDao.recordDrop(studentId, courseId, "STUDENT", "Removed from waitlist by student");
-                return "✅ Dropped from waitlist.";
+                return "Dropped from waitlist.";
             }
 
-            return "⚠ You are not enrolled or waitlisted for this course.";
+            return "You are not enrolled or waitlisted for this course.";
         } catch (Exception e) {
             System.err.println("Drop error: " + e.getMessage());
-            return "❌ Drop error: " + e.getMessage();
+            return "Drop error: " + e.getMessage();
         }
     }
 

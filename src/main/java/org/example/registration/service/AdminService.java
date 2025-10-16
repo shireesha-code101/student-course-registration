@@ -37,13 +37,13 @@ public class AdminService {
     }
 
     // ------------------------------------------------------
-    // 2️ ADD COURSE (no duplicates allowed)
+    // 2 ADD COURSE (no duplicates allowed)
     // ------------------------------------------------------
     public String addCourse(String courseId, String title, int maxSeats) {
         try {
             if (courseId == null || courseId.trim().isEmpty() ||
                     title == null || title.trim().isEmpty() || maxSeats <= 0) {
-                return "❌ Invalid input. Please provide valid course details.";
+                return "Invalid input. Please provide valid course details.";
             }
 
             // Normalize courseId (trim + uppercase to avoid accidental duplicates like "cse101" vs "CSE101")
@@ -52,7 +52,7 @@ public class AdminService {
 
             Course existing = courseDao.getCourse(courseId);
             if (existing != null) {
-                return "⚠ Course ID already exists: " + courseId;
+                return "Course ID already exists: " + courseId;
             }
 
             Course c = new Course();
@@ -63,94 +63,91 @@ public class AdminService {
 
             boolean created = courseDao.putCourse(c);
             if (!created) {
-                // If putCourse returned false, it means the course likely exists (or a condition failed)
-                return "⚠ Course ID already exists or could not be created: " + courseId;
+                return "Course ID already exists or could not be created: " + courseId;
             }
 
-            return "✅ Course added successfully: " + title + " (" + courseId + ")";
+            return "Course added successfully: " + title + " (" + courseId + ")";
         } catch (Exception e) {
             System.err.println("Error adding course: " + e.getMessage());
-            return "❌ Error adding course: " + e.getMessage();
+            return "Error adding course: " + e.getMessage();
         }
     }
 
     // ------------------------------------------------------
-    // 3️ UPDATE COURSE SEATS (defensive: only update if course truly exists)
+    // 3 UPDATE COURSE SEATS (defensive: only update if course truly exists)
     // ------------------------------------------------------
     public String updateCourseSeats(String courseId, int newSeats) {
         try {
             if (courseId == null || courseId.trim().isEmpty()) {
-                return "❌ Invalid Course ID.";
+                return "Invalid Course ID.";
             }
             courseId = courseId.trim();
 
             if (newSeats <= 0) {
-                return "❌ Seats must be a positive integer.";
+                return "Seats must be a positive integer.";
             }
 
             Course c = courseDao.getCourse(courseId);
 
             if (c == null || c.courseId == null || !courseId.equals(c.courseId)) {
-                return "❌ Course not found: " + courseId;
+                return "Course not found: " + courseId;
             }
 
             if (newSeats < c.currentEnrolled) {
-                return "⚠ Cannot reduce seats below current enrollment count (" + c.currentEnrolled + ").";
+                return "Cannot reduce seats below current enrollment count (" + c.currentEnrolled + ").";
             }
 
             c.maxSeats = newSeats;
             courseDao.putCourseForUpdate(c);
-            return "✅ Seats updated successfully for " + courseId;
+            return "Seats updated successfully for " + courseId;
         } catch (Exception e) {
             System.err.println("Error updating seats: " + e.getMessage());
-            return "❌ Error updating seats: " + e.getMessage();
+            return "Error updating seats: " + e.getMessage();
         }
     }
 
-
     // ------------------------------------------------------
-    // 4️  PROMOTE WAITLISTED STUDENT
+    // 4 PROMOTE WAITLISTED STUDENT
     // ------------------------------------------------------
     public String promoteWaitlistedStudent(String courseId) {
         try {
             Course c = courseDao.getCourse(courseId);
-            if (c == null) return "❌ Course not found: " + courseId;
+            if (c == null) return "Course not found: " + courseId;
 
             // Pop the earliest waitlisted student
             String next = waitlistDao.popFirstWaitlistedStudent(courseId);
-            if (next == null) return "⚠ No students on waitlist for " + courseId;
+            if (next == null) return "No students on waitlist for " + courseId;
 
             // Try to reserve a seat for them first (atomic check & increment)
             boolean reserved = courseDao.reserveSeatIfAvailable(courseId);
             if (!reserved) {
-                // couldn't reserve, put them back to waitlist and report
                 waitlistDao.addToWaitlist(courseId, next, java.util.Collections.emptyMap());
-                return "⚠ Promotion failed: no seats available for " + courseId + ". Student requeued.";
+                return "Promotion failed: no seats available for " + courseId + ". Student requeued.";
             }
 
             // Seat reserved successfully — create enrollment
             enrollmentDao.putEnrollment(next, courseId, "ENROLLED");
             dropDao.recordDrop(next, courseId, "SYSTEM", "Promoted from waitlist by admin");
-            return "✅ Promoted " + next + " from waitlist to enrolled.";
+            return "Promoted " + next + " from waitlist to enrolled.";
         } catch (Exception e) {
             System.err.println("Error promoting waitlisted student: " + e.getMessage());
-            return "❌ Error promoting waitlisted student: " + e.getMessage();
+            return "Error promoting waitlisted student: " + e.getMessage();
         }
     }
 
     // ------------------------------------------------------
-    // 5️ DELETE COURSE (safe + full cleanup)
+    // 5 DELETE COURSE (safe + full cleanup)
     // ------------------------------------------------------
     public String deleteCourse(String courseId) {
         if (courseId == null || courseId.trim().isEmpty()) {
-            return "❌ Invalid Course ID.";
+            return "Invalid Course ID.";
         }
         courseId = courseId.trim();
 
         try {
             Course c = courseDao.getCourse(courseId);
             if (c == null) {
-                return "❌ Course not found. Please check the Course ID.";
+                return "Course not found. Please check the Course ID.";
             }
 
             // Remove all enrollments for this course
@@ -205,35 +202,35 @@ public class AdminService {
             // Delete the course record from Course table
             courseDao.deleteCourse(courseId);
 
-            return "✅ Course " + courseId + " deleted successfully, with enrollments & waitlist cleaned up.";
+            return "Course " + courseId + " deleted successfully, with enrollments & waitlist cleaned up.";
 
         } catch (Exception e) {
             System.err.println("Error deleting course: " + e.getMessage());
-            return "❌ Error deleting course: " + e.getMessage();
+            return "Error deleting course: " + e.getMessage();
         }
     }
 
     // ------------------------------------------------------
-    // 6️ LIST WAITLISTED STUDENTS (only for existing courses)
+    // 6 LIST WAITLISTED STUDENTS (only for existing courses)
     // ------------------------------------------------------
     public String listWaitlistedStudents(String courseId) {
         try {
             if (courseId == null || courseId.trim().isEmpty()) {
-                return "❌ Invalid Course ID.";
+                return "Invalid Course ID.";
             }
             courseId = courseId.trim();
 
             Course c = courseDao.getCourse(courseId);
             if (c == null) {
-                return "⚠ No such course found: " + courseId;
+                return "No such course found: " + courseId;
             }
 
             var waitlists = waitlistDao.getWaitlistsByCourse(courseId);
             if (waitlists == null || waitlists.isEmpty()) {
-                return "⚠ No students on waitlist for " + courseId;
+                return "No students on waitlist for " + courseId;
             }
 
-            StringBuilder sb = new StringBuilder("📋 Waitlisted students for " + courseId + ":\n");
+            StringBuilder sb = new StringBuilder("Waitlisted students for " + courseId + ":\n");
             for (var item : waitlists) {
                 String sid = item.containsKey("studentId") ? item.get("studentId").s() : "Unknown";
                 sb.append(" - ").append(sid).append("\n");
@@ -242,39 +239,38 @@ public class AdminService {
 
         } catch (Exception e) {
             System.err.println("Error listing waitlisted students: " + e.getMessage());
-            return "❌ Error listing waitlisted students: " + e.getMessage();
+            return "Error listing waitlisted students: " + e.getMessage();
         }
     }
 
-
     // ------------------------------------------------------
-    // 7️ VIEW DROP HISTORY (only for courses that exist)
+    // 7 VIEW DROP HISTORY (only for courses that exist)
     // ------------------------------------------------------
     public String listDropHistoryForCourse(String courseId) {
         try {
             if (courseId == null || courseId.trim().isEmpty()) {
-                return "❌ Invalid Course ID.";
+                return "Invalid Course ID.";
             }
             courseId = courseId.trim();
 
             Course c = courseDao.getCourse(courseId);
             if (c == null) {
-                return "⚠ No such course found: " + courseId;
+                return "No such course found: " + courseId;
             }
 
             var history = dropDao.getDropHistoryByCourse(courseId);
             if (history == null || history.isEmpty()) {
-                return "⚠ No drop history found for " + courseId;
+                return "No drop history found for " + courseId;
             }
 
-            StringBuilder sb = new StringBuilder("📜 Drop History for " + courseId + ":\n");
+            StringBuilder sb = new StringBuilder("Drop History for " + courseId + ":\n");
             for (var item : history) {
                 sb.append(" - ").append(item).append("\n");
             }
             return sb.toString();
         } catch (Exception e) {
             System.err.println("Error fetching drop history: " + e.getMessage());
-            return "❌ Error fetching drop history: " + e.getMessage();
+            return "Error fetching drop history: " + e.getMessage();
         }
     }
 }
